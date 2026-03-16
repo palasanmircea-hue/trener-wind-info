@@ -68,14 +68,15 @@ const [error, setError] = useState<string | null>(null);
 }, []);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#eef3f9",
-        fontFamily: "Arial, sans-serif",
-        padding: "20px",
-      }}
-    >
+   <main
+  style={{
+    minHeight: "100vh",
+    background: "#eef3f9",
+    fontFamily: "Arial, sans-serif",
+    padding: "20px",
+    color: "#0f172a"
+  }}
+>
       <div
         style={{
           maxWidth: "900px",
