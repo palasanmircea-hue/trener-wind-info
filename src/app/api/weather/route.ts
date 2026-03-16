@@ -112,6 +112,7 @@ function decodeTaf(taf: string) {
   if (!taf) return "No TAF found.";
 
   const parts: string[] = [];
+  const tokens = taf.split(/\s+/);
 
   const issued = taf.match(/\b(\d{6})Z\b/);
   const validity = taf.match(/\b(\d{4})\/(\d{4})\b/);
@@ -119,6 +120,71 @@ function decodeTaf(taf: string) {
   const variableWind = taf.match(/\b(\d{3})V(\d{3})\b/);
   const visibility = taf.match(/\b(9999|\d{4})\b/);
   const clouds = taf.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
+
+  function decodeWindToken(token: string) {
+    const m = token.match(/^(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT$/);
+    if (!m) return null;
+
+    const dir = m[1] === "VRB" ? "variable direction" : `${m[1]}°`;
+    const gust = m[4] ? `, gusting ${m[4]} kt` : "";
+    return `wind ${dir} at ${m[2]} kt${gust}`;
+  }
+
+  function decodeVisibilityToken(token: string) {
+    if (token === "9999") return "visibility 10 km or more";
+    if (/^\d{4}$/.test(token)) return `visibility ${token} metres`;
+    return null;
+  }
+
+  function decodeCloudToken(token: string) {
+    const m = token.match(/^(FEW|SCT|BKN|OVC)(\d{3})$/);
+    if (!m) return null;
+
+    const cloudMap: Record<string, string> = {
+      FEW: "few clouds",
+      SCT: "scattered clouds",
+      BKN: "broken clouds",
+      OVC: "overcast",
+    };
+
+    return `${cloudMap[m[1]]} at ${Number(m[2]) * 100} ft`;
+  }
+
+  function decodeConditionTokens(groupTokens: string[]) {
+    const conditions: string[] = [];
+
+    for (const token of groupTokens) {
+      const windText = decodeWindToken(token);
+      if (windText) {
+        conditions.push(windText);
+        continue;
+      }
+
+      const visText = decodeVisibilityToken(token);
+      if (visText) {
+        conditions.push(visText);
+        continue;
+      }
+
+      const cloudText = decodeCloudToken(token);
+      if (cloudText) {
+        conditions.push(cloudText);
+        continue;
+      }
+
+      if (token === "CAVOK") {
+        conditions.push("CAVOK, visibility 10 km or more, no significant cloud, no significant weather");
+        continue;
+      }
+
+      if (token === "NSW") {
+        conditions.push("no significant weather");
+        continue;
+      }
+    }
+
+    return conditions;
+  }
 
   if (issued) {
     const s = issued[1];
@@ -164,18 +230,90 @@ function decodeTaf(taf: string) {
     parts.push(`${cloudMap[clouds[1]]} at ${Number(clouds[2]) * 100} ft.`);
   }
 
-  const becmgMatches = [...taf.matchAll(/BECMG\s+(\d{4})\/(\d{4})/g)];
-  for (const match of becmgMatches) {
-    parts.push(
-      `BECMG: becoming between the ${match[1].slice(0, 2)}th ${match[1].slice(2, 4)}:00 UTC and the ${match[2].slice(0, 2)}th ${match[2].slice(2, 4)}:00 UTC.`
-    );
-  }
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === "BECMG" && i + 1 < tokens.length && /^\d{4}\/\d{4}$/.test(tokens[i + 1])) {
+      const period = tokens[i + 1];
+      const groupTokens: string[] = [];
 
-  const tempoMatches = [...taf.matchAll(/TEMPO\s+(\d{4})\/(\d{4})/g)];
-  for (const match of tempoMatches) {
-    parts.push(
-      `TEMPO: temporary conditions between the ${match[1].slice(0, 2)}th ${match[1].slice(2, 4)}:00 UTC and the ${match[2].slice(0, 2)}th ${match[2].slice(2, 4)}:00 UTC.`
-    );
+      for (let j = i + 2; j < tokens.length; j++) {
+        if (
+          tokens[j] === "BECMG" ||
+          tokens[j] === "TEMPO" ||
+          tokens[j].startsWith("FM") ||
+          tokens[j] === "PROB30" ||
+          tokens[j] === "PROB40"
+        ) {
+          break;
+        }
+        groupTokens.push(tokens[j]);
+      }
+
+      const decodedConditions = decodeConditionTokens(groupTokens);
+      const conditionText =
+        decodedConditions.length > 0
+          ? ` Conditions becoming: ${decodedConditions.join(", ")}.`
+          : "";
+
+      parts.push(
+        `BECMG: becoming between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.${conditionText}`
+      );
+    }
+
+    if (tokens[i] === "TEMPO" && i + 1 < tokens.length && /^\d{4}\/\d{4}$/.test(tokens[i + 1])) {
+      const period = tokens[i + 1];
+      const groupTokens: string[] = [];
+
+      for (let j = i + 2; j < tokens.length; j++) {
+        if (
+          tokens[j] === "BECMG" ||
+          tokens[j] === "TEMPO" ||
+          tokens[j].startsWith("FM") ||
+          tokens[j] === "PROB30" ||
+          tokens[j] === "PROB40"
+        ) {
+          break;
+        }
+        groupTokens.push(tokens[j]);
+      }
+
+      const decodedConditions = decodeConditionTokens(groupTokens);
+      const conditionText =
+        decodedConditions.length > 0
+          ? ` Temporary conditions: ${decodedConditions.join(", ")}.`
+          : "";
+
+      parts.push(
+        `TEMPO: temporary conditions between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.${conditionText}`
+      );
+    }
+
+    if (tokens[i].startsWith("FM") && /^FM\d{6}$/.test(tokens[i])) {
+      const fm = tokens[i];
+      const groupTokens: string[] = [];
+
+      for (let j = i + 1; j < tokens.length; j++) {
+        if (
+          tokens[j] === "BECMG" ||
+          tokens[j] === "TEMPO" ||
+          tokens[j].startsWith("FM") ||
+          tokens[j] === "PROB30" ||
+          tokens[j] === "PROB40"
+        ) {
+          break;
+        }
+        groupTokens.push(tokens[j]);
+      }
+
+      const decodedConditions = decodeConditionTokens(groupTokens);
+      const conditionText =
+        decodedConditions.length > 0
+          ? ` New conditions from then: ${decodedConditions.join(", ")}.`
+          : "";
+
+      parts.push(
+        `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC.${conditionText}`
+      );
+    }
   }
 
   if (taf.includes("PROB30")) {
