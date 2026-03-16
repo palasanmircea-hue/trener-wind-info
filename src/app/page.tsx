@@ -83,17 +83,29 @@ const [error, setError] = useState<string | null>(null);
           margin: "0 auto",
         }}
       >
-        <h1
-          style={{
-            fontSize: "48px",
-            fontWeight: 800,
-            color: "#0d3b82",
-            marginBottom: "24px",
-            letterSpacing: "0.5px",
-          }}
-        >
-          TRENER WIND INFO
-        </h1>
+        <div style={{ marginBottom: "24px" }}>
+  <h1
+    style={{
+      fontSize: "48px",
+      fontWeight: 800,
+      color: "#0d3b82",
+      letterSpacing: "0.5px",
+      marginBottom: "4px",
+    }}
+  >
+    TRENER WIND INFO
+  </h1>
+
+  <div
+    style={{
+      fontSize: "14px",
+      color: "#64748b",
+      fontWeight: 500,
+    }}
+  >
+    Built by Mircea Palasan - Wizz Air Pilot Academy
+  </div>
+</div>
 {refreshing && data && (
   <div
     style={{
@@ -259,6 +271,7 @@ const codeBoxStyle: React.CSSProperties = {
   fontFamily: "monospace",
   lineHeight: 1.5,
   wordBreak: "break-word",
+  color: "#111827"
 };
 
 const textBoxStyle: React.CSSProperties = {
@@ -268,4 +281,5 @@ const textBoxStyle: React.CSSProperties = {
   padding: "12px",
   lineHeight: 1.7,
   whiteSpace: "pre-line",
+  color: "#111827"
 };
