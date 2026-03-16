@@ -52,32 +52,37 @@ function decodeMetar(metar: string) {
   if (!metar) return "No METAR found.";
 
   const lines: string[] = [];
+
+  const issued = metar.match(/\b(\d{6})Z\b/);
   const wind = metar.match(/\b(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT\b/);
-  const vis = metar.match(/\b(\d{4})\b/);
+  const variableWind = metar.match(/\b(\d{3})V(\d{3})\b/);
+  const visibility = metar.match(/\b(9999|\d{4})\b/);
   const temp = metar.match(/\b(M?\d{2})\/(M?\d{2})\b/);
   const qnh = metar.match(/\bQ(\d{4})\b/);
-  const cloud = metar.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
 
-  lines.push(`Raw report for LHNY.`);
+  if (issued) {
+    const s = issued[1];
+    lines.push(`Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(4, 6)} UTC.`);
+  }
 
   if (wind) {
-    const dir = wind[1] === "VRB" ? "variable" : `${wind[1]}°`;
+    const dir = wind[1] === "VRB" ? "variable direction" : `${wind[1]}°`;
     const gust = wind[4] ? `, gusting ${wind[4]} kt` : "";
     lines.push(`Wind ${dir} at ${wind[2]} kt${gust}.`);
   }
 
-  if (vis) {
-    lines.push(vis[1] === "9999" ? "Visibility 10 km or more." : `Visibility ${vis[1]} metres.`);
+  if (variableWind) {
+    lines.push(`Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`);
   }
 
-  if (cloud) {
-    const map: Record<string, string> = {
-      FEW: "few clouds",
-      SCT: "scattered clouds",
-      BKN: "broken clouds",
-      OVC: "overcast",
-    };
-    lines.push(`${map[cloud[1]]} at ${Number(cloud[2]) * 100} ft.`);
+  if (metar.includes("CAVOK")) {
+    lines.push("CAVOK: visibility 10 km or more, no significant cloud, no significant weather.");
+  } else if (visibility) {
+    if (visibility[1] === "9999") {
+      lines.push("Visibility 10 km or more.");
+    } else {
+      lines.push(`Visibility ${visibility[1]} metres.`);
+    }
   }
 
   if (temp) {
@@ -101,40 +106,41 @@ function decodeTaf(taf: string) {
   const issued = taf.match(/\b(\d{6})Z\b/);
   const validity = taf.match(/\b(\d{4})\/(\d{4})\b/);
   const wind = taf.match(/\b(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT\b/);
-  const vis = taf.match(/\b(9999|\d{4})\b/);
+  const variableWind = taf.match(/\b(\d{3})V(\d{3})\b/);
+  const visibility = taf.match(/\b(9999|\d{4})\b/);
   const clouds = taf.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
 
   if (issued) {
     const s = issued[1];
-    parts.push(
-      `Issued on day ${s.slice(0, 2)} at ${s.slice(2, 4)}:${s.slice(4, 6)} UTC.`
-    );
+    parts.push(`Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(4, 6)} UTC.`);
   }
 
   if (validity) {
     const from = validity[1];
     const to = validity[2];
     parts.push(
-      `Valid from day ${from.slice(0, 2)} at ${from.slice(2, 4)}:00 UTC until day ${to.slice(0, 2)} at ${to.slice(2, 4)}:00 UTC.`
+      `Valid from the ${from.slice(0, 2)}th at ${from.slice(2, 4)}:00 UTC until the ${to.slice(0, 2)}th at ${to.slice(2, 4)}:00 UTC.`
     );
   }
 
   if (wind) {
-    const dir = wind[1] === "VRB" ? "variable" : `${wind[1]}°`;
+    const dir = wind[1] === "VRB" ? "variable direction" : `${wind[1]}°`;
     const gust = wind[4] ? `, gusting ${wind[4]} kt` : "";
     parts.push(`Forecast wind ${dir} at ${wind[2]} kt${gust}.`);
   }
 
-  if (vis) {
-    if (vis[1] === "9999") {
-      parts.push("Forecast visibility 10 km or more.");
-    } else {
-      parts.push(`Forecast visibility ${vis[1]} metres.`);
-    }
+  if (variableWind) {
+    parts.push(`Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`);
   }
 
   if (taf.includes("CAVOK")) {
-    parts.push("Ceiling and visibility okay.");
+    parts.push("CAVOK: visibility 10 km or more, no significant cloud, no significant weather.");
+  } else if (visibility) {
+    if (visibility[1] === "9999") {
+      parts.push("Forecast visibility 10 km or more.");
+    } else {
+      parts.push(`Forecast visibility ${visibility[1]} metres.`);
+    }
   }
 
   if (clouds) {
@@ -148,20 +154,26 @@ function decodeTaf(taf: string) {
     parts.push(`${cloudMap[clouds[1]]} at ${Number(clouds[2]) * 100} ft.`);
   }
 
-  if (taf.includes("BECMG")) {
-    parts.push("A gradual change is expected later in the forecast period.");
+  const becmgMatches = [...taf.matchAll(/BECMG\s+(\d{4})\/(\d{4})/g)];
+  for (const match of becmgMatches) {
+    parts.push(
+      `BECMG: becoming between the ${match[1].slice(0, 2)}th ${match[1].slice(2, 4)}:00 UTC and the ${match[2].slice(0, 2)}th ${match[2].slice(2, 4)}:00 UTC.`
+    );
   }
 
-  if (taf.includes("TEMPO")) {
-    parts.push("Temporary changes are expected during part of the forecast period.");
+  const tempoMatches = [...taf.matchAll(/TEMPO\s+(\d{4})\/(\d{4})/g)];
+  for (const match of tempoMatches) {
+    parts.push(
+      `TEMPO: temporary conditions between the ${match[1].slice(0, 2)}th ${match[1].slice(2, 4)}:00 UTC and the ${match[2].slice(0, 2)}th ${match[2].slice(2, 4)}:00 UTC.`
+    );
   }
 
   if (taf.includes("PROB30")) {
-    parts.push("There is a 30% probability of the specified conditions.");
+    parts.push("PROB30: 30% probability of the specified conditions.");
   }
 
   if (taf.includes("PROB40")) {
-    parts.push("There is a 40% probability of the specified conditions.");
+    parts.push("PROB40: 40% probability of the specified conditions.");
   }
 
   return parts.join("\n");
