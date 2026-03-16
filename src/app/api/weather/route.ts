@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chromium } from "playwright";
+
 export const runtime = "nodejs";
 
 function extractWindFromMetar(metar: string) {
@@ -112,7 +113,7 @@ function decodeTaf(taf: string) {
   if (!taf) return "No TAF found.";
 
   const parts: string[] = [];
-  const tokens = taf.split(/\s+/);
+  const tokens = taf.split(/\s+/).map((t) => t.replace(/=$/, ""));
 
   const issued = taf.match(/\b(\d{6})Z\b/);
   const validity = taf.match(/\b(\d{4})\/(\d{4})\b/);
@@ -153,7 +154,9 @@ function decodeTaf(taf: string) {
   function decodeConditionTokens(groupTokens: string[]) {
     const conditions: string[] = [];
 
-    for (const token of groupTokens) {
+    for (const rawToken of groupTokens) {
+      const token = rawToken.replace(/=$/, "");
+
       const windText = decodeWindToken(token);
       if (windText) {
         conditions.push(windText);
@@ -236,16 +239,19 @@ function decodeTaf(taf: string) {
       const groupTokens: string[] = [];
 
       for (let j = i + 2; j < tokens.length; j++) {
+        const checkToken = tokens[j].replace(/=$/, "");
+
         if (
-          tokens[j] === "BECMG" ||
-          tokens[j] === "TEMPO" ||
-          tokens[j].startsWith("FM") ||
-          tokens[j] === "PROB30" ||
-          tokens[j] === "PROB40"
+          checkToken === "BECMG" ||
+          checkToken === "TEMPO" ||
+          checkToken.startsWith("FM") ||
+          checkToken === "PROB30" ||
+          checkToken === "PROB40"
         ) {
           break;
         }
-        groupTokens.push(tokens[j]);
+
+        groupTokens.push(checkToken);
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
@@ -264,16 +270,19 @@ function decodeTaf(taf: string) {
       const groupTokens: string[] = [];
 
       for (let j = i + 2; j < tokens.length; j++) {
+        const checkToken = tokens[j].replace(/=$/, "");
+
         if (
-          tokens[j] === "BECMG" ||
-          tokens[j] === "TEMPO" ||
-          tokens[j].startsWith("FM") ||
-          tokens[j] === "PROB30" ||
-          tokens[j] === "PROB40"
+          checkToken === "BECMG" ||
+          checkToken === "TEMPO" ||
+          checkToken.startsWith("FM") ||
+          checkToken === "PROB30" ||
+          checkToken === "PROB40"
         ) {
           break;
         }
-        groupTokens.push(tokens[j]);
+
+        groupTokens.push(checkToken);
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
@@ -292,16 +301,19 @@ function decodeTaf(taf: string) {
       const groupTokens: string[] = [];
 
       for (let j = i + 1; j < tokens.length; j++) {
+        const checkToken = tokens[j].replace(/=$/, "");
+
         if (
-          tokens[j] === "BECMG" ||
-          tokens[j] === "TEMPO" ||
-          tokens[j].startsWith("FM") ||
-          tokens[j] === "PROB30" ||
-          tokens[j] === "PROB40"
+          checkToken === "BECMG" ||
+          checkToken === "TEMPO" ||
+          checkToken.startsWith("FM") ||
+          checkToken === "PROB30" ||
+          checkToken === "PROB40"
         ) {
           break;
         }
-        groupTokens.push(tokens[j]);
+
+        groupTokens.push(checkToken);
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
@@ -331,7 +343,7 @@ function extractMetarAndTaf(text: string) {
   const lines = text
     .replace(/\r/g, "")
     .split("\n")
-    .map(l => l.trim())
+    .map((l) => l.trim())
     .filter(Boolean);
 
   let metar = "";
@@ -341,23 +353,17 @@ function extractMetarAndTaf(text: string) {
   const tafLines: string[] = [];
 
   for (const line of lines) {
-
-    // correct METAR: must start with METAR LHNY
     if (!metar && line.startsWith("METAR LHNY")) {
       metar = line;
     }
 
-    // correct TAF start
     if (line.startsWith("TAF LHNY")) {
       collectingTaf = true;
       tafLines.push(line);
       continue;
     }
 
-    // collect taf continuation lines
     if (collectingTaf) {
-
-      // stop when other bulletin starts
       if (
         line.startsWith("GAMET") ||
         line.startsWith("SIGMET") ||
@@ -376,8 +382,10 @@ function extractMetarAndTaf(text: string) {
 
   return { metar, taf };
 }
+
 function extractWindFromToken(token: string) {
-  const m = token.match(/^(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT$/);
+  const cleanToken = token.replace(/=$/, "");
+  const m = cleanToken.match(/^(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT$/);
   if (!m) return null;
 
   return {
@@ -389,7 +397,7 @@ function extractWindFromToken(token: string) {
 function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
   if (!rawTaf || currentRunway === "Unknown") return null;
 
-  const tokens = rawTaf.split(/\s+/);
+  const tokens = rawTaf.split(/\s+/).map((t) => t.replace(/=$/, ""));
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -403,8 +411,9 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
         text = `Probable runway change at ${period.slice(2, 4)}:00`;
 
         for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
-          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
-            windToken = tokens[j];
+          const checkToken = tokens[j].replace(/=$/, "");
+          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(checkToken)) {
+            windToken = checkToken;
             break;
           }
         }
@@ -417,8 +426,9 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
         text = `Possible temporary runway change at ${period.slice(2, 4)}:00`;
 
         for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
-          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
-            windToken = tokens[j];
+          const checkToken = tokens[j].replace(/=$/, "");
+          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(checkToken)) {
+            windToken = checkToken;
             break;
           }
         }
@@ -429,8 +439,9 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
       text = `Runway change expected from ${token.slice(4, 6)}:${token.slice(6, 8)}`;
 
       for (let j = i + 1; j < Math.min(i + 6, tokens.length); j++) {
-        if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
-          windToken = tokens[j];
+        const checkToken = tokens[j].replace(/=$/, "");
+        if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(checkToken)) {
+          windToken = checkToken;
           break;
         }
       }
@@ -450,23 +461,29 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
 
   return null;
 }
+
 export async function GET() {
   const browser = await chromium.launch({
-  headless: true,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"],
-});
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
   const page = await browser.newPage();
 
   try {
     await page.goto(process.env.LHNY_URL!, { waitUntil: "domcontentloaded" });
 
-    const emailInput = page.locator('input[type="email"], input[name="email"], input[name="user"], input[name="username"]').first();
+    const emailInput = page
+      .locator('input[type="email"], input[name="email"], input[name="user"], input[name="username"]')
+      .first();
     const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
 
     await emailInput.fill(process.env.AVIATION_MET_USER || "");
     await passwordInput.fill(process.env.AVIATION_MET_PASSWORD || "");
 
-    const loginButton = page.locator('button[type="submit"], input[type="submit"], button, input[type="button"]').first();
+    const loginButton = page
+      .locator('button[type="submit"], input[type="submit"], button, input[type="button"]')
+      .first();
     await loginButton.click();
 
     await page.waitForLoadState("domcontentloaded");
@@ -476,8 +493,8 @@ export async function GET() {
     const { metar, taf } = extractMetarAndTaf(bodyText);
 
     const wind = extractWindFromMetar(metar);
-const runway = chooseRunway(wind.windDirection, wind.windSpeedKt);
-const probableRunwayChangeAt = findProbableRunwayChange(taf, runway.runway);
+    const runway = chooseRunway(wind.windDirection, wind.windSpeedKt);
+    const probableRunwayChangeAt = findProbableRunwayChange(taf, runway.runway);
 
     return NextResponse.json({
       station: "LHNY",
