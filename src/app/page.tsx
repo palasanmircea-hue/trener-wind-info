@@ -62,7 +62,7 @@ const [error, setError] = useState<string | null>(null);
 
   const interval = setInterval(() => {
     load(true);
-  }, 60000);
+  }, 120000);
 
   return () => clearInterval(interval);
 }, []);
