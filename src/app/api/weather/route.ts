@@ -255,15 +255,16 @@ function decodeTaf(taf: string) {
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
-      const conditionText =
-        decodedConditions.length > 0
-          ? ` Conditions becoming: ${decodedConditions.join(", ")}.`
-          : "";
 
-      parts.push(
-        `BECMG: becoming between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.${conditionText}`
-      );
-    }
+if (decodedConditions.length > 0) {
+  parts.push(
+    `BECMG: conditions becoming ${decodedConditions.join(", ")} between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
+  );
+} else {
+  parts.push(
+    `BECMG: conditions becoming between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
+  );
+}}
 
     if (tokens[i] === "TEMPO" && i + 1 < tokens.length && /^\d{4}\/\d{4}$/.test(tokens[i + 1])) {
       const period = tokens[i + 1];
@@ -286,15 +287,16 @@ function decodeTaf(taf: string) {
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
-      const conditionText =
-        decodedConditions.length > 0
-          ? ` Temporary conditions: ${decodedConditions.join(", ")}.`
-          : "";
 
-      parts.push(
-        `TEMPO: temporary conditions between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.${conditionText}`
-      );
-    }
+if (decodedConditions.length > 0) {
+  parts.push(
+    `TEMPO: temporary conditions of ${decodedConditions.join(", ")} between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
+  );
+} else {
+  parts.push(
+    `TEMPO: temporary conditions between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
+  );
+}}}
 
     if (tokens[i].startsWith("FM") && /^FM\d{6}$/.test(tokens[i])) {
       const fm = tokens[i];
@@ -317,14 +319,16 @@ function decodeTaf(taf: string) {
       }
 
       const decodedConditions = decodeConditionTokens(groupTokens);
-      const conditionText =
-        decodedConditions.length > 0
-          ? ` New conditions from then: ${decodedConditions.join(", ")}.`
-          : "";
 
-      parts.push(
-        `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC.${conditionText}`
-      );
+if (decodedConditions.length > 0) {
+  parts.push(
+    `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC, conditions becoming ${decodedConditions.join(", ")}.`
+  );
+} else {
+  parts.push(
+    `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC.`
+  );
+}
     }
   }
 
