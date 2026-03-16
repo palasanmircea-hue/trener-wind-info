@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+type VisualCircuitSection = {
+  title: string;
+  items: string[];
+};
+
 type WeatherData = {
   station: string;
   rawMetar: string;
@@ -17,7 +22,8 @@ type WeatherData = {
   sourceUrl: string;
   fetchedAt: string;
   note: string;
-  visualCircuitRecommendations: string;
+  visualCircuitRecommendations?: string;
+  visualCircuitSections?: VisualCircuitSection[];
 };
 
 export default function HomePage() {
@@ -244,8 +250,64 @@ export default function HomePage() {
             </div>
 
             <div style={cardStyle}>
-              <h2 style={sectionTitle}>Visual circuit recommendations</h2>
-              <div style={textBoxStyle}>{data.visualCircuitRecommendations}</div>
+              <h2 style={sectionTitle}>
+                Visual Circuit Recommendations{" "}
+                <span
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#64748b",
+                  }}
+                >
+                  (beta)
+                </span>
+              </h2>
+
+              {data.visualCircuitSections && data.visualCircuitSections.length > 0 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "14px",
+                  }}
+                >
+                  {data.visualCircuitSections.map((section, index) => (
+                    <div key={`${section.title}-${index}`} style={subCardStyle}>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: 800,
+                          color: "#0d3b82",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        {section.title}
+                      </div>
+
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingLeft: "18px",
+                          lineHeight: 1.7,
+                        }}
+                      >
+                        {section.items.map((item, itemIndex) => (
+                          <li
+                            key={`${section.title}-${itemIndex}`}
+                            style={{ marginBottom: "6px" }}
+                          >
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={textBoxStyle}>
+                  {data.visualCircuitRecommendations ||
+                    "No visual circuit recommendations available."}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -286,6 +348,13 @@ const cardStyle: React.CSSProperties = {
   padding: "18px",
   boxShadow: "0 6px 18px rgba(13, 59, 130, 0.08)",
   border: "1px solid #dbe5f0",
+};
+
+const subCardStyle: React.CSSProperties = {
+  background: "#fbfdff",
+  borderRadius: "14px",
+  padding: "16px",
+  border: "1px solid #e2e8f0",
 };
 
 const sectionTitle: React.CSSProperties = {

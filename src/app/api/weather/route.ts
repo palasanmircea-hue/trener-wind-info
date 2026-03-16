@@ -440,7 +440,7 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
     if (token === "BECMG" && i + 2 < tokens.length) {
       const period = tokens[i + 1];
       if (/^\d{4}\/\d{4}$/.test(period)) {
-        text = `Probable runway change at ${period.slice(2, 4)}:00`;
+        text = `Probable runway change on day ${period.slice(0, 2)} at ${period.slice(2, 4)}:00`;
 
         for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
           const checkToken = tokens[j].replace(/=$/, "");
@@ -455,7 +455,7 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
     if (token === "TEMPO" && i + 2 < tokens.length) {
       const period = tokens[i + 1];
       if (/^\d{4}\/\d{4}$/.test(period)) {
-        text = `Possible temporary runway change at ${period.slice(2, 4)}:00`;
+        text = `Possible temporary runway change on day ${period.slice(0, 2)} at ${period.slice(2, 4)}:00`;
 
         for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
           const checkToken = tokens[j].replace(/=$/, "");
@@ -749,7 +749,48 @@ const baseGs = groundSpeedOnTrack(
     `- ${flapText(runwayFinal.crosswindKt ?? 0)}`,
   ].join("\n");
 }
+function parseVisualCircuitSections(text: string) {
+  const lines = text.split("\n");
+  const sections: { title: string; items: string[] }[] = [];
 
+  let currentTitle = "";
+  let currentItems: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const isTitle =
+      !line.startsWith("-") &&
+      line === line.toUpperCase();
+
+    if (isTitle) {
+      if (currentTitle) {
+        sections.push({
+          title: currentTitle,
+          items: currentItems,
+        });
+      }
+
+      currentTitle = line;
+      currentItems = [];
+      continue;
+    }
+
+    if (line.startsWith("-")) {
+      currentItems.push(line.slice(1).trim());
+    }
+  }
+
+  if (currentTitle) {
+    sections.push({
+      title: currentTitle,
+      items: currentItems,
+    });
+  }
+
+  return sections;
+}
 export async function GET() {
   const browser = await chromium.launch({
     headless: true,
@@ -790,11 +831,15 @@ export async function GET() {
     const runway = chooseRunway(magneticWindDirection, wind.windSpeedKt);
     const probableRunwayChangeAt = findProbableRunwayChange(taf, runway.runway);
     const visualCircuitRecommendations = generateVisualCircuitRecommendations(
-      runway.runway,
-      runway.heading,
-      magneticWindDirection,
-      wind.windSpeedKt
-    );
+  runway.runway,
+  runway.heading,
+  magneticWindDirection,
+  wind.windSpeedKt
+);
+
+const visualCircuitSections = parseVisualCircuitSections(
+  visualCircuitRecommendations
+);
 
     return NextResponse.json({
       station: "LHNY",
@@ -812,6 +857,7 @@ export async function GET() {
       fetchedAt: new Date().toISOString(),
       note: "Runway is a wind-based recommendation, not an official assigned runway.",
       visualCircuitRecommendations,
+      visualCircuitSections,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
