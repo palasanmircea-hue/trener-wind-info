@@ -16,6 +16,7 @@ type WeatherData = {
   sourceUrl: string;
   fetchedAt: string;
   note: string;
+  probableRunwayChangeAt: string | null;
 };
 
 export default function HomePage() {
@@ -140,7 +141,38 @@ const [error, setError] = useState<string | null>(null);
               }}
             >
               <InfoCard label="Station" value={data.station} />
-              <InfoCard label="Runway" value={data.runwayInUse} />
+              <div style={cardStyle}>
+  <div
+    style={{
+      fontSize: "14px",
+      color: "#5b6b7f",
+      marginBottom: "8px",
+      fontWeight: 600,
+    }}
+  >
+    Runway
+  </div>
+
+  <div
+    style={{
+      fontSize: "28px",
+      fontWeight: 800,
+      color: "#0d3b82",
+      marginBottom: "4px",
+    }}
+  >
+    {data.runwayInUse}
+  </div>
+
+  <div
+    style={{
+      fontSize: "13px",
+      color: "#64748b",
+    }}
+  >
+    {data.probableRunwayChangeAt ?? "No runway change indicated in current TAF"}
+  </div>
+</div>
               <InfoCard
                 label="Headwind"
                 value={data.headwindKt != null ? `${data.headwindKt} kt` : "-"}

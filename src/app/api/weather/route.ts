@@ -35,17 +35,27 @@ function runwayResult(windDirection: number, windSpeedKt: number, runwayHeading:
 
 function chooseRunway(windDirection: number | null, windSpeedKt: number | null) {
   if (windDirection == null || windSpeedKt == null) {
-    return { runway: "Unknown", headwindKt: null, crosswindKt: null };
+    return { runway: "Unknown", heading: null, headwindKt: null, crosswindKt: null };
   }
 
   const r18 = runwayResult(windDirection, windSpeedKt, 181);
   const r36 = runwayResult(windDirection, windSpeedKt, 1);
 
   if (r18.headwindKt > r36.headwindKt) {
-    return { runway: "18", headwindKt: r18.headwindKt, crosswindKt: r18.crosswindKt };
+    return {
+      runway: "18",
+      heading: 181,
+      headwindKt: r18.headwindKt,
+      crosswindKt: r18.crosswindKt,
+    };
   }
 
-  return { runway: "36", headwindKt: r36.headwindKt, crosswindKt: r36.crosswindKt };
+  return {
+    runway: "36",
+    heading: 1,
+    headwindKt: r36.headwindKt,
+    crosswindKt: r36.crosswindKt,
+  };
 }
 
 function decodeMetar(metar: string) {
@@ -228,7 +238,80 @@ function extractMetarAndTaf(text: string) {
 
   return { metar, taf };
 }
+function extractWindFromToken(token: string) {
+  const m = token.match(/^(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT$/);
+  if (!m) return null;
 
+  return {
+    windDirection: m[1] === "VRB" ? null : Number(m[1]),
+    windSpeedKt: Number(m[2]),
+  };
+}
+
+function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
+  if (!rawTaf || currentRunway === "Unknown") return null;
+
+  const tokens = rawTaf.split(/\s+/);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    let text: string | null = null;
+    let windToken: string | null = null;
+
+    if (token === "BECMG" && i + 2 < tokens.length) {
+      const period = tokens[i + 1];
+      if (/^\d{4}\/\d{4}$/.test(period)) {
+        text = `Probable runway change at ${period.slice(2, 4)}:00`;
+
+        for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
+          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
+            windToken = tokens[j];
+            break;
+          }
+        }
+      }
+    }
+
+    if (token === "TEMPO" && i + 2 < tokens.length) {
+      const period = tokens[i + 1];
+      if (/^\d{4}\/\d{4}$/.test(period)) {
+        text = `Possible temporary runway change at ${period.slice(2, 4)}:00`;
+
+        for (let j = i + 2; j < Math.min(i + 8, tokens.length); j++) {
+          if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
+            windToken = tokens[j];
+            break;
+          }
+        }
+      }
+    }
+
+    if (token.startsWith("FM") && /^FM\d{6}$/.test(token)) {
+      text = `Runway change expected from ${token.slice(4, 6)}:${token.slice(6, 8)}`;
+
+      for (let j = i + 1; j < Math.min(i + 6, tokens.length); j++) {
+        if (/^(\d{3}|VRB)\d{2,3}(G\d{2,3})?KT$/.test(tokens[j])) {
+          windToken = tokens[j];
+          break;
+        }
+      }
+    }
+
+    if (text && windToken) {
+      const wind = extractWindFromToken(windToken);
+      if (!wind) continue;
+
+      const predicted = chooseRunway(wind.windDirection, wind.windSpeedKt);
+
+      if (predicted.runway !== "Unknown" && predicted.runway !== currentRunway) {
+        return text;
+      }
+    }
+  }
+
+  return null;
+}
 export async function GET() {
   const browser = await chromium.launch({
   headless: true,
@@ -255,7 +338,8 @@ export async function GET() {
     const { metar, taf } = extractMetarAndTaf(bodyText);
 
     const wind = extractWindFromMetar(metar);
-    const runway = chooseRunway(wind.windDirection, wind.windSpeedKt);
+const runway = chooseRunway(wind.windDirection, wind.windSpeedKt);
+const probableRunwayChangeAt = findProbableRunwayChange(taf, runway.runway);
 
     return NextResponse.json({
       station: "LHNY",
@@ -264,6 +348,7 @@ export async function GET() {
       decodedMetar: decodeMetar(metar),
       decodedTaf: decodeTaf(taf),
       runwayInUse: runway.runway,
+      probableRunwayChangeAt,
       headwindKt: runway.headwindKt,
       crosswindKt: runway.crosswindKt,
       windDirection: wind.windDirection,
