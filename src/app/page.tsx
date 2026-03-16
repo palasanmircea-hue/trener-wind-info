@@ -9,6 +9,7 @@ type WeatherData = {
   decodedMetar: string;
   decodedTaf: string;
   runwayInUse: string;
+  probableRunwayChangeAt: string | null;
   headwindKt: number | null;
   crosswindKt: number | null;
   windDirection: number | null;
@@ -16,68 +17,68 @@ type WeatherData = {
   sourceUrl: string;
   fetchedAt: string;
   note: string;
-  probableRunwayChangeAt: string | null;
+  visualCircuitRecommendations: string;
 };
 
 export default function HomePage() {
- const [data, setData] = useState<WeatherData | null>(null);
-const [loading, setLoading] = useState(true);
-const [refreshing, setRefreshing] = useState(false);
-const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
- async function load(background = false) {
-  try {
-    if (background) {
-      setRefreshing(true);
-    } else if (!data) {
-      setLoading(true);
-    }
-
-    setError(null);
-
-    const res = await fetch("/api/weather", { cache: "no-store" });
-    const text = await res.text();
-
-    let json: WeatherData | null = null;
+  async function load(background = false) {
     try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      throw new Error("Server returned invalid response.");
-    }
+      if (background) {
+        setRefreshing(true);
+      } else if (!data) {
+        setLoading(true);
+      }
 
-    if (!res.ok) {
-      throw new Error((json as any)?.error || `HTTP ${res.status}`);
-    }
+      setError(null);
 
-    setData(json);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Unknown error");
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
+      const res = await fetch("/api/weather", { cache: "no-store" });
+      const text = await res.text();
+
+      let json: WeatherData | null = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error("Server returned invalid response.");
+      }
+
+      if (!res.ok) {
+        throw new Error((json as any)?.error || `HTTP ${res.status}`);
+      }
+
+      setData(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }
-}
 
- useEffect(() => {
-  load(false);
+  useEffect(() => {
+    load(false);
 
-  const interval = setInterval(() => {
-    load(true);
-  }, 120000);
+    const interval = setInterval(() => {
+      load(true);
+    }, 120000);
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-   <main
-  style={{
-    minHeight: "100vh",
-    background: "#eef3f9",
-    fontFamily: "Arial, sans-serif",
-    padding: "20px",
-    color: "#0f172a"
-  }}
->
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#eef3f9",
+        fontFamily: "Arial, sans-serif",
+        padding: "20px",
+        color: "#0f172a",
+      }}
+    >
       <div
         style={{
           maxWidth: "900px",
@@ -85,47 +86,55 @@ const [error, setError] = useState<string | null>(null);
         }}
       >
         <div style={{ marginBottom: "24px" }}>
-  <h1
-    style={{
-      fontSize: "48px",
-      fontWeight: 800,
-      color: "#0d3b82",
-      letterSpacing: "0.5px",
-      marginBottom: "4px",
-    }}
-  >
-    TRENER WIND INFO
-  </h1>
+          <h1
+            style={{
+              fontSize: "48px",
+              fontWeight: 800,
+              color: "#0d3b82",
+              letterSpacing: "0.5px",
+              marginBottom: "4px",
+            }}
+          >
+            TRENER WIND INFO
+          </h1>
 
-  <div
-    style={{
-      fontSize: "14px",
-      color: "#64748b",
-      fontWeight: 500,
-    }}
-  >
-    Built by Mircea Palasan - Wizz Air Pilot Academy
-  </div>
-</div>
-{refreshing && data && (
-  <div
-    style={{
-      marginBottom: "18px",
-      color: "#5b6b7f",
-      fontWeight: 600,
-    }}
-  >
-    Refreshing weather...
-  </div>
-)}
-       {loading && !data && (
-  <div style={cardStyle}>
-    <p style={{ margin: 0 }}>Loading weather...</p>
-  </div>
-)}
+          <div
+            style={{
+              fontSize: "14px",
+              color: "#64748b",
+              fontWeight: 500,
+            }}
+          >
+            Built by Mircea Palasan - Wizz Air Pilot Academy
+          </div>
+        </div>
+
+        {refreshing && data && (
+          <div
+            style={{
+              marginBottom: "18px",
+              color: "#5b6b7f",
+              fontWeight: 600,
+            }}
+          >
+            Refreshing weather...
+          </div>
+        )}
+
+        {loading && !data && (
+          <div style={cardStyle}>
+            <p style={{ margin: 0 }}>Loading weather...</p>
+          </div>
+        )}
 
         {error && (
-          <div style={{ ...cardStyle, border: "1px solid #f1b5b5", color: "#b42318" }}>
+          <div
+            style={{
+              ...cardStyle,
+              border: "1px solid #f1b5b5",
+              color: "#b42318",
+            }}
+          >
             <p style={{ margin: 0 }}>{error}</p>
           </div>
         )}
@@ -141,45 +150,52 @@ const [error, setError] = useState<string | null>(null);
               }}
             >
               <InfoCard label="Station" value={data.station} />
+
               <div style={cardStyle}>
-  <div
-    style={{
-      fontSize: "14px",
-      color: "#5b6b7f",
-      marginBottom: "8px",
-      fontWeight: 600,
-    }}
-  >
-    Runway
-  </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    color: "#5b6b7f",
+                    marginBottom: "8px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Runway
+                </div>
 
-  <div
-    style={{
-      fontSize: "28px",
-      fontWeight: 800,
-      color: "#0d3b82",
-      marginBottom: "4px",
-    }}
-  >
-    {data.runwayInUse}
-  </div>
+                <div
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: 800,
+                    color: "#0d3b82",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {data.runwayInUse}
+                </div>
 
-  <div
-    style={{
-      fontSize: "13px",
-      color: "#64748b",
-    }}
-  >
-    {data.probableRunwayChangeAt ?? "No runway change indicated in current TAF"}
-  </div>
-</div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "#64748b",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {data.probableRunwayChangeAt ??
+                    "No runway change indicated in current TAF"}
+                </div>
+              </div>
+
               <InfoCard
                 label="Headwind"
                 value={data.headwindKt != null ? `${data.headwindKt} kt` : "-"}
               />
+
               <InfoCard
                 label="Crosswind"
-                value={data.crosswindKt != null ? `${data.crosswindKt} kt` : "-"}
+                value={
+                  data.crosswindKt != null ? `${data.crosswindKt} kt` : "-"
+                }
               />
             </div>
 
@@ -215,7 +231,7 @@ const [error, setError] = useState<string | null>(null);
               </div>
             </div>
 
-            <div style={cardStyle}>
+            <div style={{ ...cardStyle, marginBottom: "18px" }}>
               <h2 style={sectionTitle}>TAF</h2>
               <div style={{ marginBottom: "14px" }}>
                 <div style={smallTitle}>Raw</div>
@@ -225,6 +241,11 @@ const [error, setError] = useState<string | null>(null);
                 <div style={smallTitle}>Decoded</div>
                 <div style={textBoxStyle}>{data.decodedTaf}</div>
               </div>
+            </div>
+
+            <div style={cardStyle}>
+              <h2 style={sectionTitle}>Visual circuit recommendations</h2>
+              <div style={textBoxStyle}>{data.visualCircuitRecommendations}</div>
             </div>
           </>
         )}
@@ -303,7 +324,7 @@ const codeBoxStyle: React.CSSProperties = {
   fontFamily: "monospace",
   lineHeight: 1.5,
   wordBreak: "break-word",
-  color: "#111827"
+  color: "#111827",
 };
 
 const textBoxStyle: React.CSSProperties = {
@@ -313,5 +334,5 @@ const textBoxStyle: React.CSSProperties = {
   padding: "12px",
   lineHeight: 1.7,
   whiteSpace: "pre-line",
-  color: "#111827"
+  color: "#111827",
 };
