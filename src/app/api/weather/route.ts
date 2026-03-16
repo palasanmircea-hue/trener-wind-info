@@ -21,7 +21,11 @@ function angleDiff(a: number, b: number) {
   return d;
 }
 
-function runwayResult(windDirection: number, windSpeedKt: number, runwayHeading: number) {
+function runwayResult(
+  windDirection: number,
+  windSpeedKt: number,
+  runwayHeading: number
+) {
   const diff = angleDiff(windDirection, runwayHeading);
   const rad = (diff * Math.PI) / 180;
 
@@ -36,7 +40,12 @@ function runwayResult(windDirection: number, windSpeedKt: number, runwayHeading:
 
 function chooseRunway(windDirection: number | null, windSpeedKt: number | null) {
   if (windDirection == null || windSpeedKt == null) {
-    return { runway: "Unknown", heading: null, headwindKt: null, crosswindKt: null };
+    return {
+      runway: "Unknown",
+      heading: null,
+      headwindKt: null,
+      crosswindKt: null,
+    };
   }
 
   const r18 = runwayResult(windDirection, windSpeedKt, 181);
@@ -73,7 +82,12 @@ function decodeMetar(metar: string) {
 
   if (issued) {
     const s = issued[1];
-    lines.push(`Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(4, 6)} UTC.`);
+    lines.push(
+      `Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(
+        4,
+        6
+      )} UTC.`
+    );
   }
 
   if (wind) {
@@ -83,11 +97,15 @@ function decodeMetar(metar: string) {
   }
 
   if (variableWind) {
-    lines.push(`Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`);
+    lines.push(
+      `Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`
+    );
   }
 
   if (metar.includes("CAVOK")) {
-    lines.push("CAVOK: visibility 10 km or more, no significant cloud, no significant weather.");
+    lines.push(
+      "CAVOK: visibility 10 km or more, no significant cloud, no significant weather."
+    );
   } else if (visibility) {
     if (visibility[1] === "9999") {
       lines.push("Visibility 10 km or more.");
@@ -176,7 +194,9 @@ function decodeTaf(taf: string) {
       }
 
       if (token === "CAVOK") {
-        conditions.push("CAVOK, visibility 10 km or more, no significant cloud, no significant weather");
+        conditions.push(
+          "CAVOK, visibility 10 km or more, no significant cloud, no significant weather"
+        );
         continue;
       }
 
@@ -191,14 +211,22 @@ function decodeTaf(taf: string) {
 
   if (issued) {
     const s = issued[1];
-    parts.push(`Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(4, 6)} UTC.`);
+    parts.push(
+      `Issued on the ${s.slice(0, 2)}th at ${s.slice(2, 4)}:${s.slice(
+        4,
+        6
+      )} UTC.`
+    );
   }
 
   if (validity) {
     const from = validity[1];
     const to = validity[2];
     parts.push(
-      `Valid from the ${from.slice(0, 2)}th at ${from.slice(2, 4)}:00 UTC until the ${to.slice(0, 2)}th at ${to.slice(2, 4)}:00 UTC.`
+      `Valid from the ${from.slice(0, 2)}th at ${from.slice(
+        2,
+        4
+      )}:00 UTC until the ${to.slice(0, 2)}th at ${to.slice(2, 4)}:00 UTC.`
     );
   }
 
@@ -209,11 +237,15 @@ function decodeTaf(taf: string) {
   }
 
   if (variableWind) {
-    parts.push(`Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`);
+    parts.push(
+      `Variable wind direction between ${variableWind[1]}° and ${variableWind[2]}°.`
+    );
   }
 
   if (taf.includes("CAVOK")) {
-    parts.push("CAVOK: visibility 10 km or more, no significant cloud, no significant weather.");
+    parts.push(
+      "CAVOK: visibility 10 km or more, no significant cloud, no significant weather."
+    );
   } else if (visibility) {
     if (visibility[1] === "9999") {
       parts.push("Forecast visibility 10 km or more.");
@@ -234,7 +266,11 @@ function decodeTaf(taf: string) {
   }
 
   for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i] === "BECMG" && i + 1 < tokens.length && /^\d{4}\/\d{4}$/.test(tokens[i + 1])) {
+    if (
+      tokens[i] === "BECMG" &&
+      i + 1 < tokens.length &&
+      /^\d{4}\/\d{4}$/.test(tokens[i + 1])
+    ) {
       const period = tokens[i + 1];
       const groupTokens: string[] = [];
 
@@ -256,17 +292,36 @@ function decodeTaf(taf: string) {
 
       const decodedConditions = decodeConditionTokens(groupTokens);
 
-if (decodedConditions.length > 0) {
-  parts.push(
-    `BECMG: conditions becoming ${decodedConditions.join(", ")} between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
-  );
-} else {
-  parts.push(
-    `BECMG: conditions becoming between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
-  );
-}}
+      if (decodedConditions.length > 0) {
+        parts.push(
+          `BECMG: conditions becoming ${decodedConditions.join(
+            ", "
+          )} between the ${period.slice(0, 2)}th ${period.slice(
+            2,
+            4
+          )}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(
+            7,
+            9
+          )}:00 UTC.`
+        );
+      } else {
+        parts.push(
+          `BECMG: conditions becoming between the ${period.slice(
+            0,
+            2
+          )}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(
+            5,
+            7
+          )}th ${period.slice(7, 9)}:00 UTC.`
+        );
+      }
+    }
 
-    if (tokens[i] === "TEMPO" && i + 1 < tokens.length && /^\d{4}\/\d{4}$/.test(tokens[i + 1])) {
+    if (
+      tokens[i] === "TEMPO" &&
+      i + 1 < tokens.length &&
+      /^\d{4}\/\d{4}$/.test(tokens[i + 1])
+    ) {
       const period = tokens[i + 1];
       const groupTokens: string[] = [];
 
@@ -288,15 +343,30 @@ if (decodedConditions.length > 0) {
 
       const decodedConditions = decodeConditionTokens(groupTokens);
 
-if (decodedConditions.length > 0) {
-  parts.push(
-    `TEMPO: temporary conditions of ${decodedConditions.join(", ")} between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
-  );
-} else {
-  parts.push(
-    `TEMPO: temporary conditions between the ${period.slice(0, 2)}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(7, 9)}:00 UTC.`
-  );
-}}}
+      if (decodedConditions.length > 0) {
+        parts.push(
+          `TEMPO: temporary conditions of ${decodedConditions.join(
+            ", "
+          )} between the ${period.slice(0, 2)}th ${period.slice(
+            2,
+            4
+          )}:00 UTC and the ${period.slice(5, 7)}th ${period.slice(
+            7,
+            9
+          )}:00 UTC.`
+        );
+      } else {
+        parts.push(
+          `TEMPO: temporary conditions between the ${period.slice(
+            0,
+            2
+          )}th ${period.slice(2, 4)}:00 UTC and the ${period.slice(
+            5,
+            7
+          )}th ${period.slice(7, 9)}:00 UTC.`
+        );
+      }
+    }
 
     if (tokens[i].startsWith("FM") && /^FM\d{6}$/.test(tokens[i])) {
       const fm = tokens[i];
@@ -320,15 +390,23 @@ if (decodedConditions.length > 0) {
 
       const decodedConditions = decodeConditionTokens(groupTokens);
 
-if (decodedConditions.length > 0) {
-  parts.push(
-    `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC, conditions becoming ${decodedConditions.join(", ")}.`
-  );
-} else {
-  parts.push(
-    `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(4, 6)}:${fm.slice(6, 8)} UTC.`
-  );
-}
+      if (decodedConditions.length > 0) {
+        parts.push(
+          `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(
+            4,
+            6
+          )}:${fm.slice(6, 8)} UTC, conditions becoming ${decodedConditions.join(
+            ", "
+          )}.`
+        );
+      } else {
+        parts.push(
+          `FM: from the ${fm.slice(2, 4)}th at ${fm.slice(
+            4,
+            6
+          )}:${fm.slice(6, 8)} UTC.`
+        );
+      }
     }
   }
 
@@ -440,7 +518,10 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
     }
 
     if (token.startsWith("FM") && /^FM\d{6}$/.test(token)) {
-      text = `Runway change expected from ${token.slice(4, 6)}:${token.slice(6, 8)}`;
+      text = `Runway change expected from ${token.slice(4, 6)}:${token.slice(
+        6,
+        8
+      )}`;
 
       for (let j = i + 1; j < Math.min(i + 6, tokens.length); j++) {
         const checkToken = tokens[j].replace(/=$/, "");
@@ -457,7 +538,10 @@ function findProbableRunwayChange(rawTaf: string, currentRunway: string) {
 
       const predicted = chooseRunway(wind.windDirection, wind.windSpeedKt);
 
-      if (predicted.runway !== "Unknown" && predicted.runway !== currentRunway) {
+      if (
+        predicted.runway !== "Unknown" &&
+        predicted.runway !== currentRunway
+      ) {
         return text;
       }
     }
@@ -478,15 +562,21 @@ export async function GET() {
     await page.goto(process.env.LHNY_URL!, { waitUntil: "domcontentloaded" });
 
     const emailInput = page
-      .locator('input[type="email"], input[name="email"], input[name="user"], input[name="username"]')
+      .locator(
+        'input[type="email"], input[name="email"], input[name="user"], input[name="username"]'
+      )
       .first();
-    const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
+    const passwordInput = page
+      .locator('input[type="password"], input[name="password"]')
+      .first();
 
     await emailInput.fill(process.env.AVIATION_MET_USER || "");
     await passwordInput.fill(process.env.AVIATION_MET_PASSWORD || "");
 
     const loginButton = page
-      .locator('button[type="submit"], input[type="submit"], button, input[type="button"]')
+      .locator(
+        'button[type="submit"], input[type="submit"], button, input[type="button"]'
+      )
       .first();
     await loginButton.click();
 
