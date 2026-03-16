@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chromium } from "playwright";
+export const runtime = "nodejs";
 
 function extractWindFromMetar(metar: string) {
   const m = metar.match(/\b(\d{3}|VRB)(\d{2,3})(G\d{2,3})?KT\b/);
