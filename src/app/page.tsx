@@ -19,46 +19,53 @@ type WeatherData = {
 };
 
 export default function HomePage() {
-  const [data, setData] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ const [data, setData] = useState<WeatherData | null>(null);
+const [loading, setLoading] = useState(true);
+const [refreshing, setRefreshing] = useState(false);
+const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    try {
+ async function load(background = false) {
+  try {
+    if (background) {
+      setRefreshing(true);
+    } else if (!data) {
       setLoading(true);
-      setError(null);
-
-      const res = await fetch("/api/weather", { cache: "no-store" });
-      const text = await res.text();
-
-      let json: WeatherData | null = null;
-      try {
-        json = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error("Server returned invalid response.");
-      }
-
-      if (!res.ok) {
-        throw new Error((json as any)?.error || `HTTP ${res.status}`);
-      }
-
-      setData(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
     }
+
+    setError(null);
+
+    const res = await fetch("/api/weather", { cache: "no-store" });
+    const text = await res.text();
+
+    let json: WeatherData | null = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error("Server returned invalid response.");
+    }
+
+    if (!res.ok) {
+      throw new Error((json as any)?.error || `HTTP ${res.status}`);
+    }
+
+    setData(json);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Unknown error");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
   }
+}
 
-  useEffect(() => {
-    load();
+ useEffect(() => {
+  load(false);
 
-    const interval = setInterval(() => {
-      load();
-    }, 60000);
+  const interval = setInterval(() => {
+    load(true);
+  }, 60000);
 
-    return () => clearInterval(interval);
-  }, []);
+  return () => clearInterval(interval);
+}, []);
 
   return (
     <main
@@ -86,12 +93,22 @@ export default function HomePage() {
         >
           TRENER WIND INFO
         </h1>
-
-        {loading && (
-          <div style={cardStyle}>
-            <p style={{ margin: 0 }}>Loading weather...</p>
-          </div>
-        )}
+{refreshing && data && (
+  <div
+    style={{
+      marginBottom: "18px",
+      color: "#5b6b7f",
+      fontWeight: 600,
+    }}
+  >
+    Refreshing weather...
+  </div>
+)}
+       {loading && !data && (
+  <div style={cardStyle}>
+    <p style={{ margin: 0 }}>Loading weather...</p>
+  </div>
+)}
 
         {error && (
           <div style={{ ...cardStyle, border: "1px solid #f1b5b5", color: "#b42318" }}>
@@ -99,7 +116,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {data && !loading && (
+        {data && (
           <>
             <div
               style={{
